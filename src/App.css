@@ -1,0 +1,12 @@
+/* MedVerify IoT App-specific style extensions */
+.auth-card-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+}
+
+.auth-card {
+  max-width: 440px;
+  width: 100%;
+}
