@@ -24,7 +24,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                bat 'docker build -t jashk185/medverify:latest .'
+                bat 'docker build -t ghcr.io/jashkhant185-png/medverify:latest .'
             }
         }
 
@@ -32,45 +32,40 @@ pipeline {
 
 
 
-stage('Push Image to Docker Hub') {
+
+stage('Push Image to GitHub Container Registry') {
     steps {
         withCredentials([
             usernamePassword(
-                credentialsId: 'dockerhub-pat-new',
-                usernameVariable: 'DOCKER_USER',
-                passwordVariable: 'DOCKER_PASS'
+                credentialsId: 'ghcr-creds',
+                usernameVariable: 'GHCR_USER',
+                passwordVariable: 'GHCR_TOKEN'
             )
         ]) {
             powershell '''
                 $ErrorActionPreference = "Stop"
-                $dockerConfig = Join-Path $env:TEMP ("jenkins-docker-" + [guid]::NewGuid())
-                New-Item -ItemType Directory -Path $dockerConfig | Out-Null
-                $env:DOCKER_CONFIG = $dockerConfig
 
-                try {
-                    Write-Host "Docker username: $env:DOCKER_USER"
-                    Write-Host "Token length: $($env:DOCKER_PASS.Length)"
+                $env:GHCR_TOKEN |
+                    docker login ghcr.io `
+                        --username $env:GHCR_USER `
+                        --password-stdin
 
-                    $env:DOCKER_PASS.TrimEnd("`r", "`n") |
-                        docker login --username $env:DOCKER_USER --password-stdin
-
-                    if ($LASTEXITCODE -ne 0) {
-                        throw "Docker Hub login failed with exit code $LASTEXITCODE"
-                    }
-
-                    docker push jashk185/medverify:latest
-                    if ($LASTEXITCODE -ne 0) {
-                        throw "Docker Hub push failed with exit code $LASTEXITCODE"
-                    }
+                if ($LASTEXITCODE -ne 0) {
+                    throw "GitHub Container Registry login failed"
                 }
-                finally {
-                    Remove-Item -Recurse -Force $dockerConfig -ErrorAction SilentlyContinue
+
+                docker push ghcr.io/jashkhant185-png/medverify:latest
+
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Image push to GHCR failed"
                 }
             '''
         }
     }
 }
 
-    }
 }
+
+    }
+
 

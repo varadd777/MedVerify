@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: medverify
-          image: jashk185/medverify:latest
+          image: ghcr.io/jashkhant185-png/medverify:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 80
