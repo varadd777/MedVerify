@@ -1,0 +1,21 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: medverify
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: medverify
+  template:
+    metadata:
+      labels:
+        app: medverify
+    spec:
+      containers:
+        - name: medverify
+          image: jashk185/medverify:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
