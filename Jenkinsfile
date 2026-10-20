@@ -31,11 +31,12 @@ pipeline {
         
 
 
+
 stage('Push Image to Docker Hub') {
     steps {
         withCredentials([
             usernamePassword(
-                credentialsId: 'dockerhub-creds',
+                credentialsId: 'dockerhub-pat-new',
                 usernameVariable: 'DOCKER_USER',
                 passwordVariable: 'DOCKER_PASS'
             )
@@ -47,17 +48,25 @@ stage('Push Image to Docker Hub') {
                 $env:DOCKER_CONFIG = $dockerConfig
 
                 try {
-                    $env:DOCKER_PASS | docker login --username $env:DOCKER_USER --password-stdin
+                    Write-Host "Docker username: $env:DOCKER_USER"
+                    Write-Host "Token length: $($env:DOCKER_PASS.Length)"
+
+                    $env:DOCKER_PASS.TrimEnd("`r", "`n") |
+                        docker login --username $env:DOCKER_USER --password-stdin
+
                     if ($LASTEXITCODE -ne 0) {
-                        exit $LASTEXITCODE
+                        throw "Docker Hub login failed with exit code $LASTEXITCODE"
+                    }
+
+                    docker push jashk185/medverify:latest
+                    if ($LASTEXITCODE -ne 0) {
+                        throw "Docker Hub push failed with exit code $LASTEXITCODE"
                     }
                 }
                 finally {
                     Remove-Item -Recurse -Force $dockerConfig -ErrorAction SilentlyContinue
                 }
             '''
-
-            bat 'docker push jashk185/medverify:latest'
         }
     }
 }
