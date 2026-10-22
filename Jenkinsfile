@@ -2,6 +2,12 @@
 pipeline {
     agent any
 
+    environment {
+        IMAGE_NAME = 'varadkotkar7/medverify'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+        DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -12,60 +18,47 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                bat 'npm install'
+                sh 'node --version'
+                sh 'npm --version'
+                sh 'npm ci'
             }
         }
 
         stage('Build and Test') {
             steps {
-                bat 'npm run build'
+                sh 'npm run lint'
+                sh 'npm test'
+                sh 'npm run build'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                bat 'docker build -t ghcr.io/jashkhant185-png/medverify:latest .'
+                sh 'docker build -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:latest .'
             }
         }
 
-        
-
-
-
-
-stage('Push Image to GitHub Container Registry') {
-    steps {
-        withCredentials([
-            usernamePassword(
-                credentialsId: 'ghcr-creds',
-                usernameVariable: 'GHCR_USER',
-                passwordVariable: 'GHCR_TOKEN'
-            )
-        ]) {
-            powershell '''
-                $ErrorActionPreference = "Stop"
-
-                $env:GHCR_TOKEN |
-                    docker login ghcr.io `
-                        --username $env:GHCR_USER `
-                        --password-stdin
-
-                if ($LASTEXITCODE -ne 0) {
-                    throw "GitHub Container Registry login failed"
+        stage('Push Image to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: "${DOCKERHUB_CREDENTIALS}",
+                    usernameVariable: 'DOCKERHUB_USER',
+                    passwordVariable: 'DOCKERHUB_TOKEN'
+                )]) {
+                    sh '''
+                        echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin
+                        docker push "$IMAGE_NAME:$IMAGE_TAG"
+                        docker push "$IMAGE_NAME:latest"
+                        docker logout
+                    '''
                 }
+            }
+        }
+    }
 
-                docker push ghcr.io/jashkhant185-png/medverify:latest
-
-                if ($LASTEXITCODE -ne 0) {
-                    throw "Image push to GHCR failed"
-                }
-            '''
+    post {
+        always {
+            echo 'MedVerify pipeline finished.'
         }
     }
 }
-
-}
-
-    }
-
-
